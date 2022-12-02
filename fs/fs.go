@@ -49,9 +49,6 @@ func (pmtiles_fs *PMTilesFS) Open(path string) (io_fs.File, error) {
 		return nil, fmt.Errorf("Failed to join path, %w", err)
 	}
 
-	fmt.Println(fq_path)
-	fmt.Println("GET")
-
 	status_code, _, body := pmtiles_fs.loop.Get(ctx, fq_path)
 
 	if status_code != 200 {
