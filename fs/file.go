@@ -7,7 +7,7 @@ import (
 
 type PMTilesFile struct {
 	io_fs.File
-	reader io.Reader
+	reader io.ReadCloser
 	info   *PMTilesFileInfo
 }
 
@@ -20,5 +20,5 @@ func (f *PMTilesFile) Read(b []byte) (int, error) {
 }
 
 func (f *PMTilesFile) Close() error {
-	return nil
+	return f.reader.Close()
 }

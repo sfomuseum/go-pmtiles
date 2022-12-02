@@ -29,6 +29,8 @@ func New(ctx context.Context, tile_path string, database string) (io_fs.FS, erro
 		return nil, fmt.Errorf("Failed to create pmtiles loop, %w", err)
 	}
 
+	loop.Start()
+
 	pmtiles_fs := &PMTilesFS{
 		loop:     loop,
 		database: database,
@@ -52,16 +54,12 @@ func (pmtiles_fs *PMTilesFS) Open(path string) (io_fs.File, error) {
 
 	status_code, _, body := pmtiles_fs.loop.Get(ctx, fq_path)
 
-	fmt.Println("SAD", status_code)
-
 	if status_code != 200 {
 		return nil, io_fs.ErrNotExist
 	}
 
-	fmt.Println(status_code)
-
-	br := bytes.NewReader(body)
-	gr, err := gzip.NewReader(br)
+	bytes_r := bytes.NewReader(body)
+	gzip_r, err := gzip.NewReader(bytes_r)
 
 	if err != nil {
 		return nil, fmt.Errorf("Failed to create gzip reader, %w", err)
@@ -74,7 +72,7 @@ func (pmtiles_fs *PMTilesFS) Open(path string) (io_fs.File, error) {
 	}
 
 	f := &PMTilesFile{
-		reader: gr,
+		reader: gzip_r,
 		info:   info,
 	}
 

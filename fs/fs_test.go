@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	_ "gocloud.dev/blob/fileblob"
+	"io"
+	"path/filepath"
 	"testing"
 )
 
@@ -11,8 +13,15 @@ func TestPMTilesFS(t *testing.T) {
 
 	ctx := context.Background()
 
-	fs_root := "file:///usr/local/data"
-	fs_database := "sfov3"
+	rel_path := "../fixtures"
+	abs_path, err := filepath.Abs(rel_path)
+
+	if err != nil {
+		t.Fatalf("Failed to derive absolute path for %s, %v", rel_path, err)
+	}
+	
+	fs_root := fmt.Sprintf("file://%s", abs_path)
+	fs_database := "sfomuseum_architecture"
 
 	f_uri := "12/655/1585.mvt"
 
@@ -34,5 +43,19 @@ func TestPMTilesFS(t *testing.T) {
 		t.Fatalf("Failed stat %s, %v", f_uri, err)
 	}
 
-	fmt.Println(i.Name())
+	if i.Name() != "1585.mvt" {
+		t.Fatalf("Unexpected name, %s", i.Name())
+	}
+	
+	_, err = io.Copy(io.Discard, f)
+
+	if err != nil {
+		t.Fatalf("Failed to copy file, %v", err)
+	}
+
+	err = f.Close()
+
+	if err != nil {
+		t.Fatalf("Failed to close file, %v", err)
+	}
 }
