@@ -5,20 +5,20 @@ import (
 	io_fs "io/fs"
 )
 
-type PMTilesFile struct {
+type pmTilesFile struct {
 	io_fs.File
 	reader io.ReadCloser
-	info   *PMTilesFileInfo
+	info   *pmTilesFileInfo
 }
 
-func (f *PMTilesFile) Stat() (io_fs.FileInfo, error) {
+func (f *pmTilesFile) Stat() (io_fs.FileInfo, error) {
 	return f.info, nil
 }
 
-func (f *PMTilesFile) Read(b []byte) (int, error) {
+func (f *pmTilesFile) Read(b []byte) (int, error) {
 	return f.reader.Read(b)
 }
 
-func (f *PMTilesFile) Close() error {
+func (f *pmTilesFile) Close() error {
 	return f.reader.Close()
 }

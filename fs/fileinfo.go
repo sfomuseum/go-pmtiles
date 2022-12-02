@@ -5,31 +5,33 @@ import (
 	"time"
 )
 
-type PMTilesFileInfo struct {
+type pmTilesFileInfo struct {
 	io_fs.FileInfo
-	name string
+	name     string
+	size     int64
+	mod_time time.Time
 }
 
-func (i *PMTilesFileInfo) Name() string {
+func (i *pmTilesFileInfo) Name() string {
 	return i.name
 }
 
-func (i *PMTilesFileInfo) Size() int64 {
-	return 0 // fix me
+func (i *pmTilesFileInfo) Size() int64 {
+	return i.size
 }
 
-func (i *PMTilesFileInfo) Mode() io_fs.FileMode {
+func (i *pmTilesFileInfo) Mode() io_fs.FileMode {
 	return io_fs.ModeDevice
 }
 
-func (i *PMTilesFileInfo) ModTime() time.Time {
-	return time.Now() // fix me
+func (i *pmTilesFileInfo) ModTime() time.Time {
+	return i.mod_time
 }
 
-func (i *PMTilesFileInfo) IsDir() bool {
+func (i *pmTilesFileInfo) IsDir() bool {
 	return false
 }
 
-func (i *PMTilesFileInfo) Sys() any {
+func (i *pmTilesFileInfo) Sys() any {
 	return nil
 }

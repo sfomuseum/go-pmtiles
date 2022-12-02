@@ -225,7 +225,7 @@ func (loop *Loop) get_metadata(ctx context.Context, http_headers map[string]stri
 func (loop *Loop) get_tile(ctx context.Context, http_headers map[string]string, name string, z uint8, x uint32, y uint32, ext string) (int, map[string]string, []byte) {
 	root_req := Request{key: CacheKey{name: name, offset: 0, length: 0}, value: make(chan CachedValue, 1)}
 	loop.reqs <- root_req
-	log.Println("request loop")
+
 	// https://golang.org/doc/faq#atomic_maps
 	root_value := <-root_req.value
 	header := root_value.header
@@ -283,6 +283,7 @@ func (loop *Loop) get_tile(ctx context.Context, http_headers map[string]string, 
 				if header_val, ok := headerContentEncoding(header.TileCompression); ok {
 					http_headers["Content-Encoding"] = header_val
 				}
+				http_headers["Content-Length"] = fmt.Sprintf("%d", entry.Length)
 				return 200, http_headers, b
 			} else {
 				dir_offset = header.LeafDirectoryOffset + entry.Offset
@@ -326,7 +327,7 @@ func (loop *Loop) Get(ctx context.Context, path string) (int, map[string]string,
 	}
 
 	if ok, key, z, x, y, ext := parse_tile_path(path); ok {
-		log.Println("a", key, z, x, y, ext)		
+		log.Println("a", key, z, x, y, ext)
 		return loop.get_tile(ctx, http_headers, key, z, x, y, ext)
 	}
 

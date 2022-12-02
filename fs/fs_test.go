@@ -19,7 +19,7 @@ func TestPMTilesFS(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to derive absolute path for %s, %v", rel_path, err)
 	}
-	
+
 	fs_root := fmt.Sprintf("file://%s", abs_path)
 	fs_database := "sfomuseum_architecture"
 
@@ -46,7 +46,7 @@ func TestPMTilesFS(t *testing.T) {
 	if i.Name() != "1585.mvt" {
 		t.Fatalf("Unexpected name, %s", i.Name())
 	}
-	
+
 	_, err = io.Copy(io.Discard, f)
 
 	if err != nil {
@@ -58,4 +58,11 @@ func TestPMTilesFS(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to close file, %v", err)
 	}
+
+	sz := i.Size()
+
+	if sz != int64(74801) {
+		t.Fatalf("Unexpected size, %d", sz)
+	}
+
 }
