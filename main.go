@@ -32,8 +32,9 @@ var cli struct {
 	} `cmd:"" help:"Convert an MBTiles or older spec version to PMTiles."`
 
 	Show struct {
-		Path   string `arg:""`
-		Bucket string `help:"Remote bucket"`
+		Path     string `arg:""`
+		Bucket   string `help:"Remote bucket"`
+		Metadata bool   `help:"Print only the JSON metadata."`
 	} `cmd:"" help:"Inspect a local or remote archive."`
 
 	Tile struct {
@@ -58,10 +59,11 @@ var cli struct {
 
 	Verify struct {
 		Input string `arg:"" help:"Input archive." type:"existingfile"`
-	} `cmd:"" help:"Verifies that a local archive is valid."`
+	} `cmd:"" help:"Verify the correctness of an archive structure, without verifying individual tile contents."`
 
 	Serve struct {
 		Path           string `arg:"" help:"Local path or bucket prefix"`
+		Interface      string `default:"0.0.0.0"`
 		Port           int    `default:8080`
 		Cors           string `help:"Value of HTTP CORS header."`
 		CacheSize      int    `default:64 help:"Size of cache in Megabytes."`
@@ -90,12 +92,12 @@ func main() {
 
 	switch ctx.Command() {
 	case "show <path>":
-		err := pmtiles.Show(logger, cli.Show.Bucket, cli.Show.Path, false, 0, 0, 0)
+		err := pmtiles.Show(logger, cli.Show.Bucket, cli.Show.Path, cli.Show.Metadata, false, 0, 0, 0)
 		if err != nil {
 			logger.Fatalf("Failed to show archive, %v", err)
 		}
 	case "tile <path> <z> <x> <y>":
-		err := pmtiles.Show(logger, cli.Tile.Bucket, cli.Tile.Path, true, cli.Tile.Z, cli.Tile.X, cli.Tile.Y)
+		err := pmtiles.Show(logger, cli.Tile.Bucket, cli.Tile.Path, false, true, cli.Tile.Z, cli.Tile.X, cli.Tile.Y)
 		if err != nil {
 			logger.Fatalf("Failed to show tile, %v", err)
 		}
@@ -119,8 +121,8 @@ func main() {
 			logger.Printf("served %s in %s", r.URL.Path, time.Since(start))
 		})
 
-		logger.Printf("Serving %s %s on port %d with Access-Control-Allow-Origin: %s\n", cli.Serve.Bucket, cli.Serve.Path, cli.Serve.Port, cli.Serve.Cors)
-		logger.Fatal(http.ListenAndServe(":"+strconv.Itoa(cli.Serve.Port), nil))
+		logger.Printf("Serving %s %s on port %d and interface %s with Access-Control-Allow-Origin: %s\n", cli.Serve.Bucket, cli.Serve.Path, cli.Serve.Port, cli.Serve.Interface, cli.Serve.Cors)
+		logger.Fatal(http.ListenAndServe(cli.Serve.Interface+":"+strconv.Itoa(cli.Serve.Port), nil))
 	case "extract <input> <output>":
 		err := pmtiles.Extract(logger, cli.Extract.Bucket, cli.Extract.Input, cli.Extract.Maxzoom, cli.Extract.Region, cli.Extract.Bbox, cli.Extract.Output, cli.Extract.DownloadThreads, cli.Extract.Overfetch, cli.Extract.DryRun)
 		if err != nil {
