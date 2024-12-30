@@ -2,6 +2,12 @@ package caddy
 
 import (
 	"fmt"
+	"io"
+	"log"
+	"net/http"
+	"strconv"
+	"time"
+
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
@@ -12,11 +18,6 @@ import (
 	_ "gocloud.dev/blob/fileblob"
 	_ "gocloud.dev/blob/gcsblob"
 	_ "gocloud.dev/blob/s3blob"
-	"io"
-	"log"
-	"net/http"
-	"strconv"
-	"time"
 )
 
 func init() {
@@ -26,11 +27,11 @@ func init() {
 
 // Middleware creates a Z/X/Y tileserver backed by a local or remote bucket of PMTiles archives.
 type Middleware struct {
-	Bucket         string `json:"bucket"`
-	CacheSize      int    `json:"cache_size"`
-	PublicHostname string `json:"public_hostname"`
-	logger         *zap.Logger
-	server         *pmtiles.Server
+	Bucket    string `json:"bucket"`
+	CacheSize int    `json:"cache_size"`
+	PublicURL string `json:"public_url"`
+	logger    *zap.Logger
+	server    *pmtiles.Server
 }
 
 // CaddyModule returns the Caddy module information.
@@ -45,7 +46,7 @@ func (m *Middleware) Provision(ctx caddy.Context) error {
 	m.logger = ctx.Logger()
 	logger := log.New(io.Discard, "", log.Ldate)
 	prefix := "." // serve only the root of the bucket for now, at the root route of Caddyfile
-	server, err := pmtiles.NewServer(m.Bucket, prefix, logger, m.CacheSize, "", m.PublicHostname)
+	server, err := pmtiles.NewServer(m.Bucket, prefix, logger, m.CacheSize, "", m.PublicURL)
 	if err != nil {
 		return err
 	}
@@ -66,13 +67,8 @@ func (m *Middleware) Validate() error {
 
 func (m Middleware) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp.Handler) error {
 	start := time.Now()
-	status_code, headers, body := m.server.Get(r.Context(), r.URL.Path)
-	for k, v := range headers {
-		w.Header().Set(k, v)
-	}
-	w.WriteHeader(status_code)
-	w.Write(body)
-	m.logger.Info("response", zap.Int("status", status_code), zap.String("path", r.URL.Path), zap.Duration("duration", time.Since(start)))
+	statusCode := m.server.ServeHTTP(w, r)
+	m.logger.Info("response", zap.Int("status", statusCode), zap.String("path", r.URL.Path), zap.Duration("duration", time.Since(start)))
 
 	return next.ServeHTTP(w, r)
 }
@@ -95,8 +91,8 @@ func (m *Middleware) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 					return d.ArgErr()
 				}
 				m.CacheSize = num
-			case "public_hostname":
-				if !d.Args(&m.PublicHostname) {
+			case "public_url":
+				if !d.Args(&m.PublicURL) {
 					return d.ArgErr()
 				}
 			}
