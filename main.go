@@ -45,8 +45,9 @@ var cli struct {
 	} `cmd:"" help:"Fetch one tile from a local or remote archive and output on stdout"`
 
 	Cluster struct {
-		Input string `arg:"" help:"Input archive" type:"existingfile"`
-	} `cmd:"" help:"Cluster an unclustered local archive" hidden:""`
+		Input           string `arg:"" help:"Input archive" type:"existingfile"`
+		NoDeduplication bool   `help:"Don't attempt to deduplicate tiles"`
+	} `cmd:"" help:"Cluster an unclustered local archive, optimizing the size and layout"`
 
 	Edit struct {
 		Input      string `arg:"" help:"Input archive" type:"existingfile"`
@@ -70,7 +71,7 @@ var cli struct {
 	Merge struct {
 		Output string   `arg:"" help:"Output archive" type:"path"`
 		Input  []string `arg:"" help:"Input archives"`
-	} `cmd:"" help:"Merge multiple archives into a single archive"`
+	} `cmd:"" help:"Merge multiple archives into a single archive" hidden:""`
 
 	Convert struct {
 		Input           string `arg:"" help:"Input archive" type:"existingfile"`
@@ -78,24 +79,23 @@ var cli struct {
 		Force           bool   `help:"Force removal"`
 		NoDeduplication bool   `help:"Don't attempt to deduplicate tiles"`
 		Tmpdir          string `help:"An optional path to a folder for temporary files" type:"existingdir"`
-	} `cmd:"" help:"Convert an MBTiles or older spec version to PMTiles"`
+	} `cmd:"" help:"Convert an MBTiles database to PMTiles"`
 
 	Verify struct {
 		Input string `arg:"" help:"Input archive" type:"existingfile"`
 	} `cmd:"" help:"Verify the correctness of an archive structure, without verifying individual tile contents"`
 
 	Makesync struct {
-		Input        string `arg:"" type:"existingfile"`
-		BlockSizeKb  int    `default:"20" help:"The approximate block size, in kilobytes; 0 means 1 tile = 1 block"`
-		HashFunction string `default:"xxh64" help:"The hash function"`
-		Checksum     string `help:"Store a checksum in the syncfile"`
+		Input       string `arg:"" type:"existingfile"`
+		BlockSizeKb int    `default:"20" help:"The approximate block size, in kilobytes; 0 means 1 tile = 1 block"`
 	} `cmd:"" help:"" hidden:""`
 
 	Sync struct {
-		Existing string `arg:"" type:"existingfile"`
-		New      string `arg:"" help:"Remote archive"`
-		DryRun   bool   `help:"Calculate new parts to download, but don't download them"`
-	} `cmd:"" help:"" hidden:""`
+		Existing         string `arg:"" type:"existingfile"`
+		New              string `arg:"" help:"Local or remote archive, with .sync sidecar file"`
+		DryRun           bool   `help:"Calculate new parts to download, but don't download them"`
+		RangesPerRequest int    `default:"100" help:"Number of ranges in a single HTTP request (limit depends on server)"`
+	} `cmd:"" help:"Sync a local file with a remote one by only downloading changed parts" hidden:""`
 
 	Serve struct {
 		Path      string `arg:"" help:"Local path or bucket prefix"`
@@ -178,6 +178,11 @@ func main() {
 		if err != nil {
 			logger.Fatalf("Failed to extract, %v", err)
 		}
+	case "cluster <input>":
+		err := pmtiles.Cluster(logger, cli.Cluster.Input, !cli.Cluster.NoDeduplication)
+		if err != nil {
+			logger.Fatalf("Failed to cluster, %v", err)
+		}
 	case "convert <input> <output>":
 		path := cli.Convert.Input
 		output := cli.Convert.Output
@@ -228,7 +233,7 @@ func main() {
 			logger.Fatalf("Failed to edit archive, %v", err)
 		}
 	case "makesync <input>":
-		err := pmtiles.Makesync(logger, version, cli.Makesync.Input, cli.Makesync.BlockSizeKb, cli.Makesync.Checksum)
+		err := pmtiles.Makesync(logger, version, cli.Makesync.Input, cli.Makesync.BlockSizeKb)
 		if err != nil {
 			logger.Fatalf("Failed to makesync archive, %v", err)
 		}
